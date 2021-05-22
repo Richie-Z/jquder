@@ -6,8 +6,9 @@
 package com.richie.jqueder;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -18,12 +19,16 @@ public class DB {
     List<String> table = new ArrayList<>();
     List<String> select = new ArrayList<>();
     List<String> where = new ArrayList<>();
+    String insert = "";
 
     public DB(String table) {
         this.table.add(table);
     }
 
     public String toSql() {
+        if (!this.insert.isEmpty()) {
+            return insert;
+        }
         StringBuilder temp_select = new StringBuilder();
         if (!select.isEmpty()) {
             for (int i = 0; i < select.size(); i++) {
@@ -33,42 +38,62 @@ public class DB {
             }
         }
         String select_query = temp_select.length() == 0 ? "*" : temp_select.toString();
-        return "SELECT " + select_query 
-                + " FROM " + this.table.get(0) 
+        return "SELECT " + select_query
+                + " FROM " + this.table.get(0)
                 + this.toPlainString(this.where);
     }
-    
-    public DB select(String... select) {
-        if (select.length > 1) {
-            for (String s : select) {
-                this.select.add(table.get(0).concat("." + s));
+
+    public DB select(String... selects) {
+        if (selects.length > 1) {
+            for (String s : selects) {
+                this.select.add(this.concatWithTable(s));
             }
         } else {
-            this.select.add(table.get(0).concat("." + select[0]));
+            this.select.add(this.concatWithTable(selects[0]));
         }
         return this;
     }
 
-    public String find(String id) {
+    public String find(Object id) {
         return this.find(id, "id");
     }
 
-    public String find(String id, String pk) {
+    public String find(Object id, String pk) {
         this.where.add(this.where.size() > 0
                 ? " AND " + pk + " = " + id
                 : " WHERE " + pk + " = " + id);
         return this.toSql();
     }
-    
-    public DB where(String pk, String... where){
-        this.where.add(this.where.size() > 0 
-                ? " AND " + pk + this.defineWhere(where) 
+
+    public DB where(String pk, Object... where) {
+        this.where.add(this.where.size() > 0
+                ? " AND " + pk + this.defineWhere(where)
                 : " WHERE " + pk + this.defineWhere(where));
         return this;
     }
-    public String defineWhere(String[] a) {
-        return a.length == 1 ? " = " + this.addDoubleQuotes(a[0]) :" " + a[0] + " " + this.addDoubleQuotes(a[1]);
+
+    public String count(String... pk) {
+        String col = pk.length == 0 ? "id" : pk[0];
+        this.select.add("COUNT(".concat(col + ")"));
+        return this.toSql();
     }
+
+    public String max(String col) {
+        this.select.add("MAX(".concat(col + ")"));
+        return this.toSql();
+    }
+
+    public String avg(String col) {
+        this.select.add("AVG(".concat(col + ")"));
+        return this.toSql();
+    }
+
+    public String defineWhere(Object[] a) {
+        return a.length == 1
+                ? " = " + this.addDoubleQuotes(a[0])
+                : " " + a[0] + " " + this.addDoubleQuotes(a[1]);
+    }
+
     public String toPlainString(List a) {
         StringBuilder temp = new StringBuilder();
         a.forEach(s -> {
@@ -76,12 +101,45 @@ public class DB {
         });
         return temp.toString();
     }
-    public String addDoubleQuotes(String value) {
-        return "\"" + value + "\"";
+
+    public String concatWithTable(String s) {
+        if (s.contains(".")) {
+            return s;
+        }
+        return this.table.get(0).concat("." + s);
     }
+
+    public Object addDoubleQuotes(Object value) {
+        if (value instanceof String) {
+            return "\"" + value + "\"";
+        }
+        return value;
+    }
+
+    public String insert(HashMap<String, Object> hm) {
+        StringBuilder sql = new StringBuilder("INSERT INTO " + this.table.get(0) + " (");
+        int current_loop = 0;
+        for (Map.Entry<String, Object> e : hm.entrySet()) {
+            current_loop++;
+            sql.append(e.getKey() + (current_loop == hm.size() ? "" : ","));
+        }
+        current_loop = 0;
+        sql.append(")".concat(" VALUES ("));
+        for (Map.Entry<String, Object> e : hm.entrySet()) {
+            current_loop++;
+            sql.append(addDoubleQuotes(e.getValue()) + (current_loop == hm.size() ? "" : ","));
+        }
+        sql.append(")");
+        this.insert = sql.toString();
+        return this.toSql();
+    }
+
     public static void main(String[] args) {
-        DB db = new DB("migrations");
-        db.select("batch", "id").select("migration").where("migration","LIKE","asjagdad").where("richie","tampan").find("1");
-        System.out.println(db.toSql());
+        DB db = new DB("kelas");
+        HashMap<String, Object> hm = new HashMap<>();
+        hm.put("kelas", 11);
+        hm.put("kompetensi_keahlian", "BKP");
+        System.out.println(db.insert(hm));
+
     }
 }
