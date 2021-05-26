@@ -19,16 +19,12 @@ public class DB {
     List<String> table = new ArrayList<>();
     List<String> select = new ArrayList<>();
     List<String> where = new ArrayList<>();
-    String insert = "";
 
     public DB(String table) {
         this.table.add(table);
     }
 
     public String toSql() {
-        if (!this.insert.isEmpty()) {
-            return insert;
-        }
         StringBuilder temp_select = new StringBuilder();
         if (!select.isEmpty()) {
             for (int i = 0; i < select.size(); i++) {
@@ -121,17 +117,38 @@ public class DB {
         int current_loop = 0;
         for (Map.Entry<String, Object> e : hm.entrySet()) {
             current_loop++;
-            sql.append(e.getKey() + (current_loop == hm.size() ? "" : ","));
+            sql.append(e.getKey()).append(this.checkIfOffset(current_loop,hm.size()));
         }
         current_loop = 0;
         sql.append(")".concat(" VALUES ("));
         for (Map.Entry<String, Object> e : hm.entrySet()) {
             current_loop++;
-            sql.append(addDoubleQuotes(e.getValue()) + (current_loop == hm.size() ? "" : ","));
+            sql.append(this.addDoubleQuotes(e.getValue())).append(this.checkIfOffset(current_loop, hm.size()));
         }
         sql.append(")");
-        this.insert = sql.toString();
-        return this.toSql();
+        return sql.toString();
+    }
+
+    public String delete() {
+        String sql = "DELETE FROM ".concat(this.table.get(0) + this.where.get(0));
+        return sql;
+    }
+
+    public String update(HashMap<String, Object> hm) {
+        StringBuilder sql = new StringBuilder("UPDATE " + this.table.get(0) + " SET ");
+        int current_loop = 0;
+        for (Map.Entry<String, Object> e : hm.entrySet()) {
+            current_loop++;
+            sql.append(e.getKey() + " = "
+                    + this.addDoubleQuotes(e.getValue())
+                    + this.checkIfOffset(current_loop, hm.size()));
+        }
+        sql.append(this.where.get(0));
+        return sql.toString();
+    }
+
+    public String checkIfOffset(int current, int max) {
+        return current == max ? "" : ",";
     }
 
     public static void main(String[] args) {
@@ -139,7 +156,7 @@ public class DB {
         HashMap<String, Object> hm = new HashMap<>();
         hm.put("kelas", 11);
         hm.put("kompetensi_keahlian", "BKP");
-        System.out.println(db.insert(hm));
-
+        System.out.println(db.where("id", 1).delete());
+        System.out.println(db.where("id", 1).insert(hm));
     }
 }
