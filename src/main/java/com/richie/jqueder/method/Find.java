@@ -28,7 +28,7 @@ public class Find extends DB{
     }
      
      public String update(HashMap<String, Object> hm) {
-        StringBuilder sql = new StringBuilder("UPDATE " + this.table.get(0) + " SET ");
+        StringBuilder sql = new StringBuilder("UPDATE " + super.table.get(0) + " SET ");
         int current_loop = 0;
         for (Map.Entry<String, Object> e : hm.entrySet()) {
             current_loop++;
@@ -36,7 +36,7 @@ public class Find extends DB{
                     + DB.helper.addDoubleQuotes(e.getValue())
                     + DB.helper.checkIfOffset(current_loop, hm.size()));
         }
-        sql.append(this.where.get(0));
+        sql.append(super.where.get(0));
         return sql.toString();
     }
 }
